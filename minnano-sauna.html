@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>みんなのサウナ 🔥</title>
+  <style>
+    /* ─── Hero / Gallery ─── */
+    .hero {
+      background: #1a0d05;
+      position: relative;
+    }
+    .hero-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 3px;
+    }
+    .hero-photo-slot {
+      width: 100%;
+      background: #1a0d05;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .hero-img {
+      width: 100%;
+      max-height: 50vw;
+      object-fit: contain;
+      display: block;
+    }
+    @media (min-width: 500px) { .hero-img { max-height: 260px; } }
+    .hero-img-placeholder {
+      width: 100%;
+      height: 44vw;
+      max-height: 220px;
+      background: linear-gradient(135deg, #3d1f0a 0%, #5c2d0e 100%);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-size: 2.2rem; gap: 8px;
+      color: rgba(255,255,255,0.35);
+    }
+    .hero-img-placeholder span { font-size: 0.78rem; text-align: center; padding: 0 10px; }
+    .hero-title-bar {
+      background: linear-gradient(135deg, var(--wood-dark) 0%, var(--wood) 100%);
+      padding: 14px 18px 12px;
+    }
+    .hero-title {
+      color: #fff;
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+    }
+    .hero-subtitle {
+      color: rgba(255,255,255,0.72);
+      font-size: 0.78rem;
+      margin-top: 3px;
+    }
+    .hero-photo-hint.hidden { display: none; }
+    /* Photo upload inputs */
+    #photo-input-1, #photo-input-2 { display: none; }
+    /* Placeholder: not clickable by default */
+    .hero-img-placeholder { cursor: default; }
+    body.admin-mode .hero-img-placeholder { cursor: pointer; }
+    /* Photo change overlay — hidden unless admin-mode */
+    .photo-slot-wrap {
+      position: relative;
+      width: 100%; height: 100%;
+      overflow: hidden;
+    }
+    .photo-slot-wrap .photo-change-overlay {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0);
+      display: none;
+      align-items: center; justify-content: center;
+      transition: background 0.2s;
+    }
+    body.admin-mode .photo-slot-wrap .photo-change-overlay { display: flex; }
+    body.admin-mode .photo-slot-wrap:hover .photo-change-overlay {
+      background: rgba(0,0,0,0.42);
+    }
+    .photo-change-btn {
+      background: rgba(255,255,255,0.9);
+      color: #4e2c17;
+      border: none;
+      border-radius: 20px;
+      padding: 7px 16px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      opacity: 0;
+      transform: scale(0.85);
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+    }
+    body.admin-mode .photo-slot-wrap:hover .photo-change-btn {
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
+    }
+  </style>
+  <style>
+    :root {
+      --wood: #7c4a2d;
+      --wood-light: #a0623a;
+      --wood-dark: #4e2c17;
+      --steam: #f5ede6;
+      --steam-dark: #ecddd4;
+      --ember: #e05a28;
+      --ember-light: #f57c4a;
+      --stone: #6b7280;
+      --moss: #3d7a44;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif;
+      background: var(--steam);
+      color: var(--wood-dark);
+      min-height: 100vh;
+    }
+    /* ─── Header ─── */
+    .app-header {
+      background: linear-gradient(135deg, var(--wood-dark) 0%, var(--wood) 100%);
+      color: #fff;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(78,44,23,0.3);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .app-header h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: 0.02em; }
+    .app-header small { font-size: 0.68rem; opacity: 0.75; display: block; margin-top: 2px; }
+    .btn-admin {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #fff;
+      padding: 9px 16px;
+      border-radius: 22px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-admin:active { background: rgba(255,255,255,0.3); }
+    /* ─── View containers ─── */
+    .view { display: none; max-width: 680px; margin: 0 auto; padding: 16px 12px 90px; }
+    .view.active { display: block; }
+    /* ─── Calendar ─── */
+    .month-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .month-nav h2 { font-size: 1.15rem; font-weight: 700; color: var(--wood-dark); }
+    .nav-btn {
+      background: #fff;
+      border: 1px solid var(--steam-dark);
+      border-radius: 10px;
+      padding: 10px 18px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      color: var(--wood);
+      transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .nav-btn:active { background: var(--wood); color: #fff; }
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 3px;
+      background: #fff;
+      border-radius: 16px;
+      padding: 12px 10px;
+      box-shadow: 0 2px 10px rgba(78,44,23,0.1);
+    }
+    .cal-header {
+      text-align: center;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--stone);
+      padding: 2px 0 8px;
+    }
+    .cal-header:first-child { color: #e05a28; }
+    .cal-header:last-child  { color: #4a7ab5; }
+    .cal-day {
+      aspect-ratio: 1;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      border-radius: 10px;
+      cursor: default;
+      position: relative;
+      font-size: 0.9rem;
+      font-weight: 500;
+      padding: 2px 1px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .cal-day.empty { }
+    .cal-day.past { color: #bbb; }
+    .cal-day.today { font-weight: 700; color: var(--ember); }
+    .cal-day.has-slots {
+      background: #fff7f2;
+      border: 1.5px solid var(--ember-light);
+      cursor: pointer;
+    }
+    .cal-day.has-slots:hover { background: var(--ember); color: #fff; }
+    .cal-day.has-slots:hover .slot-dots span { background: #fff; }
+    .cal-day.selected { background: var(--ember) !important; color: #fff !important; border-color: var(--wood-dark) !important; }
+    .cal-day.selected .slot-dots span { background: #fff !important; }
+    .cal-day.sunday { color: #e05a28; }
+    .cal-day.saturday { color: #4a7ab5; }
+    .slot-dots { display: flex; gap: 2px; margin-top: 3px; }
+    .slot-dots span {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--ember);
+    }
+    .slot-dots span.taken { background: #ccc; }
+    /* ─── Day detail panel ─── */
+    .day-panel {
+      background: #fff;
+      border-radius: 14px;
+      padding: 20px;
+      margin-top: 16px;
+      box-shadow: 0 1px 6px rgba(78,44,23,0.1);
+    }
+    .day-panel h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--wood-dark);
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--steam-dark);
+    }
+    .slot-list { display: flex; flex-direction: column; gap: 8px; }
+    .slot-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1.5px solid var(--steam-dark);
+      background: var(--steam);
+      transition: all 0.15s;
+    }
+    .slot-item.available {
+      border-color: var(--ember-light);
+      background: #fff7f2;
+    }
+    .slot-item.taken {
+      background: #f0f0f0;
+      color: #bbb;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+    .slot-item.taken .slot-time { text-decoration: line-through; color: #bbb; }
+    .slot-item.pending {
+      background: #fffbf0;
+      border-color: #f0c060;
+      cursor: not-allowed;
+      opacity: 0.85;
+    }
+    .slot-time { font-weight: 700; font-size: 1rem; }
+    .slot-status { font-size: 0.78rem; color: var(--stone); margin-top: 2px; }
+    .slot-status.available { color: var(--moss); font-weight: 600; }
+    .slot-status.taken { color: #aaa; }
+    .slot-status.pending { color: #c0892a; font-weight: 600; }
+    .btn-reserve {
+      background: var(--ember);
+      color: #fff;
+      border: none;
+      padding: 11px 20px;
+      border-radius: 22px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-reserve:active { background: var(--wood); }
+    /* ─── Modal ─── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(78,44,23,0.45);
+      z-index: 200;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: #fff;
+      width: 100%; max-width: 680px;
+      border-radius: 20px 20px 0 0;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 28px 24px 40px;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+      animation: slideUp 0.25s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(60px); opacity: 0; }
+      to   { transform: translateY(0);   opacity: 1; }
+    }
+    .modal-close {
+      float: right;
+      background: var(--steam);
+      border: none;
+      border-radius: 50%;
+      width: 32px; height: 32px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--wood);
+    }
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--wood-dark);
+    }
+    /* ─── Form ─── */
+    .form-group { margin-bottom: 16px; }
+    .form-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--wood);
+      margin-bottom: 6px;
+    }
+    .form-label span.req { color: var(--ember); margin-left: 3px; }
+    .form-input, .form-select, .form-textarea {
+      width: 100%;
+      border: 1.5px solid var(--steam-dark);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 1rem; /* 16px以上でiOSの自動ズームを防ぐ */
+      color: var(--wood-dark);
+      background: var(--steam);
+      outline: none;
+      transition: border-color 0.15s;
+      font-family: inherit;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      border-color: var(--ember);
+      background: #fff;
+    }
+    .form-textarea { resize: vertical; min-height: 72px; }
+    /* Sticker toggle */
+    .sticker-toggle {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    }
+    .sticker-option input { display: none; }
+    .sticker-option label {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 14px 10px;
+      border-radius: 12px;
+      border: 2px solid var(--steam-dark);
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+      font-size: 0.85rem;
+      gap: 4px;
+    }
+    .sticker-option label .icon { font-size: 1.8rem; }
+    .sticker-option input:checked + label {
+      border-color: var(--ember);
+      background: #fff7f2;
+      color: var(--ember);
+      font-weight: 600;
+    }
+    /* Price preview */
+    .price-preview {
+      background: linear-gradient(135deg, var(--wood-dark), var(--wood));
+      color: #fff;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .price-preview .label { font-size: 0.82rem; opacity: 0.8; }
+    .price-preview .amount { font-size: 1.5rem; font-weight: 700; }
+    .price-preview .amount.free { color: #7ddfaa; }
+    /* ─── Submit button ─── */
+    .btn-submit {
+      width: 100%;
+      background: var(--ember);
+      color: #fff;
+      border: none;
+      padding: 15px;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: background 0.15s;
+      letter-spacing: 0.03em;
+    }
+    .btn-submit:hover { background: var(--wood); }
+    /* ─── Success screen ─── */
+    .success-box {
+      background: #fff;
+      border-radius: 14px;
+      padding: 40px 24px;
+      text-align: center;
+      box-shadow: 0 1px 6px rgba(78,44,23,0.1);
+    }
+    .success-icon { font-size: 4rem; margin-bottom: 16px; }
+    .success-box h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 8px; color: var(--wood-dark); }
+    .success-box p { font-size: 0.88rem; color: var(--stone); line-height: 1.7; }
+    .btn-back {
+      display: inline-block;
+      margin-top: 20px;
+      background: var(--steam-dark);
+      color: var(--wood);
+      border: none;
+      padding: 12px 28px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-back:hover { background: var(--wood); color: #fff; }
+    /* ─── Admin ─── */
+    .admin-tabs {
+      display: flex; gap: 4px;
+      background: #fff;
+      border-radius: 14px;
+      padding: 4px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 6px rgba(78,44,23,0.1);
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .tab-btn {
+      flex: 1;
+      min-width: 60px;
+      padding: 11px 6px;
+      border: none;
+      border-radius: 10px;
+      background: transparent;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--stone);
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .tab-btn.active {
+      background: var(--ember);
+      color: #fff;
+    }
+    .badge {
+      display: inline-block;
+      background: var(--ember);
+      color: #fff;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      padding: 1px 7px;
+      margin-left: 4px;
+      font-weight: 700;
+    }
+    /* Reservation card */
+    .res-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 4px rgba(78,44,23,0.08);
+      border-left: 4px solid transparent;
+    }
+    .res-card.pending  { border-left-color: #f0c060; }
+    .res-card.approved { border-left-color: var(--moss); }
+    .res-card.rejected { border-left-color: #ccc; opacity: 0.6; }
+    .res-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .res-name { font-weight: 700; font-size: 0.95rem; color: var(--wood-dark); }
+    .res-badge {
+      font-size: 0.72rem;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+    .res-badge.pending  { background: #fff3d0; color: #c0892a; }
+    .res-badge.approved { background: #d4f5de; color: var(--moss); }
+    .res-badge.rejected { background: #f0f0f0; color: #999; }
+    .res-detail { font-size: 0.83rem; color: var(--stone); margin-bottom: 4px; }
+    .res-price { font-size: 0.88rem; font-weight: 600; color: var(--wood-dark); margin: 6px 0; }
+    .res-price.free { color: var(--moss); }
+    .res-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .btn-approve {
+      flex: 1;
+      background: var(--moss);
+      color: #fff;
+      border: none;
+      padding: 9px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-approve:hover { opacity: 0.85; }
+    .btn-reject {
+      flex: 1;
+      background: #f0f0f0;
+      color: #888;
+      border: none;
+      padding: 9px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-reject:hover { background: #e0e0e0; color: #666; }
+    /* Admin slot management */
+    .slot-manager {
+      background: #fff;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 1px 6px rgba(78,44,23,0.1);
+    }
+    .slot-manager h3 {
+      font-size: 1rem; font-weight: 700; margin-bottom: 14px;
+      color: var(--wood-dark);
+    }
+    .add-slot-form { display: flex; flex-direction: column; gap: 10px; }
+    .add-slot-row { display: flex; gap: 8px; align-items: flex-end; }
+    .btn-add-slot {
+      background: var(--ember);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .btn-add-slot:hover { background: var(--wood); }
+    .slot-list-admin { margin-top: 16px; }
+    .slot-list-admin h4 { font-size: 0.85rem; font-weight: 600; color: var(--stone); margin-bottom: 8px; }
+    .admin-slot-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--steam);
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 0.88rem;
+    }
+    .admin-slot-item .slot-info { color: var(--wood-dark); font-weight: 500; }
+    .admin-slot-item .slot-res-count { font-size: 0.78rem; color: var(--stone); }
+    .btn-del-slot {
+      background: transparent;
+      border: none;
+      color: #ccc;
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 6px;
+      transition: all 0.15s;
+    }
+    .btn-del-slot:hover { background: #fde; color: #e05a28; }
+    /* Login */
+    .login-box {
+      background: #fff;
+      border-radius: 16px;
+      padding: 36px 28px;
+      max-width: 360px;
+      margin: 0 auto;
+      box-shadow: 0 1px 8px rgba(78,44,23,0.12);
+      text-align: center;
+    }
+    .login-box .icon { font-size: 3rem; margin-bottom: 12px; }
+    .login-box h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 20px; color: var(--wood-dark); }
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 20px; left: 50%;
+      transform: translateX(-50%) translateY(60px);
+      background: var(--wood-dark);
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 20px;
+      font-size: 0.88rem;
+      font-weight: 500;
+      z-index: 999;
+      transition: transform 0.25s;
+      white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    /* Empty state */
+    .empty { text-align: center; padding: 40px 20px; color: var(--stone); }
+    .empty .icon { font-size: 2.5rem; margin-bottom: 10px; }
+    .empty p { font-size: 0.88rem; line-height: 1.6; }
+    /* Info banner */
+    .info-banner {
+      background: linear-gradient(135deg, #fff7f2, #ffeee4);
+      border: 1.5px solid var(--ember-light);
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      font-size: 0.85rem;
+      color: var(--wood-dark);
+      line-height: 1.8;
+    }
+    .info-banner strong { color: var(--ember); }
+    @media (min-width: 500px) {
+      .modal-box { border-radius: 20px; margin: auto; }
+      .modal-overlay { align-items: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── HERO PHOTO ─── -->
+<div class="hero" id="hero-section">
+  <div class="hero-inner">
+    <div class="hero-photo-slot" id="hero-slot-1" onclick="App.tryChangePhoto(1)">
+      <div class="hero-img-placeholder">🏠<span>外観</span></div>
+    </div>
+    <div class="hero-photo-slot" id="hero-slot-2" onclick="App.tryChangePhoto(2)">
+      <div class="hero-img-placeholder">🔥<span>内装</span></div>
+    </div>
+    <div class="hero-photo-slot" id="hero-slot-3" onclick="App.tryChangePhoto(3)">
+      <div class="hero-img-placeholder">💦<span>水風呂</span></div>
+    </div>
+  </div>
+  <div class="hero-title-bar">
+    <div class="hero-title">🔥 みんなのサウナ</div>
+    <div class="hero-subtitle">DIYで作った、みんなのためのサウナ</div>
+  </div>
+</div>
+<div class="hero-photo-hint hidden" id="photo-hint"></div>
+<input type="file" id="photo-input-1" accept="image/*" onchange="App.loadPhoto(this,1)">
+<input type="file" id="photo-input-2" accept="image/*" onchange="App.loadPhoto(this,2)">
+<input type="file" id="photo-input-3" accept="image/*" onchange="App.loadPhoto(this,3)">
+
+<!-- ─── HEADER ─── -->
+<header class="app-header">
+  <div>
+    <h1>🔥 みんなのサウナ</h1>
+    <small>DIYサウナ予約システム</small>
+  </div>
+  <button class="btn-admin" onclick="App.goAdmin()">管理者 ⚙️</button>
+</header>
+
+<!-- ─── VIEW: 予約カレンダー ─── -->
+<div id="view-calendar" class="view active">
+  <div class="info-banner">
+    🎟️ <strong>オリジナルステッカー持参 → 無料</strong><br>
+    💰 ステッカーなし → <strong>¥10,000 / 1時間</strong>（何人でも同額）
+  </div>
+  <div class="month-nav">
+    <button class="nav-btn" onclick="App.prevMonth()">‹</button>
+    <h2 id="month-title"></h2>
+    <button class="nav-btn" onclick="App.nextMonth()">›</button>
+  </div>
+  <div class="calendar-grid" id="calendar-grid"></div>
+  <div class="day-panel" id="day-panel" style="display:none;"></div>
+</div>
+
+<!-- ─── VIEW: 申し込み完了 ─── -->
+<div id="view-success" class="view">
+  <div class="success-box">
+    <div class="success-icon">🛁</div>
+    <h2>予約申請を送りました！</h2>
+    <p>オーナーが確認後、承認いたします。<br>お楽しみに！熱々のサウナでお待ちしています。🔥</p>
+    <button class="btn-back" onclick="App.showView('calendar')">カレンダーに戻る</button>
+  </div>
+</div>
+
+<!-- ─── VIEW: 管理者ログイン ─── -->
+<div id="view-admin-login" class="view">
+  <div class="login-box">
+    <div class="icon">🔑</div>
+    <h2>管理者ログイン</h2>
+    <div class="form-group">
+      <label class="form-label">パスワード</label>
+      <input type="password" class="form-input" id="admin-pw" placeholder="パスワードを入力" onkeydown="if(event.key==='Enter')App.adminLogin()">
+    </div>
+    <button class="btn-submit" onclick="App.adminLogin()">ログイン</button>
+    <br>
+    <button class="btn-back" onclick="App.showView('calendar')" style="margin-top:12px;">← カレンダーに戻る</button>
+  </div>
+</div>
+
+<!-- ─── VIEW: 管理者ダッシュボード ─── -->
+<div id="view-admin" class="view">
+  <div class="admin-tabs">
+    <button class="tab-btn active" id="tab-pending"   onclick="App.adminTab('pending')">申請中 <span class="badge" id="pending-count">0</span></button>
+    <button class="tab-btn"        id="tab-approved"  onclick="App.adminTab('approved')">承認済</button>
+    <button class="tab-btn"        id="tab-slots"     onclick="App.adminTab('slots')">枠管理</button>
+    <button class="tab-btn"        id="tab-biz"       onclick="App.adminTab('biz')">営業時間</button>
+  </div>
+  <div id="admin-content"></div>
+  <button class="btn-back" onclick="App.adminLogout()" style="margin-top:20px;">ログアウト</button>
+</div>
+
+<!-- ─── MODAL: 予約フォーム ─── -->
+<div class="modal-overlay" id="modal-reserve">
+  <div class="modal-box">
+    <button class="modal-close" onclick="App.closeModal()">✕</button>
+    <div class="modal-title" id="modal-title">予約する</div>
+    <form id="reserve-form" onsubmit="App.submitReservation(event)">
+      <div class="form-group">
+        <label class="form-label">お名前 <span class="req">*</span></label>
+        <input type="text" class="form-input" id="f-name" required placeholder="例：山田太郎">
+      </div>
+      <div class="form-group">
+        <label class="form-label">連絡先（LINE / 電話 / メール）<span class="req">*</span></label>
+        <input type="text" class="form-input" id="f-contact" required placeholder="例：@yamada_sauna">
+      </div>
+      <div class="form-group">
+        <label class="form-label">人数 <span class="req">*</span></label>
+        <select class="form-select" id="f-people">
+          <option value="1">1人</option>
+          <option value="2">2人</option>
+          <option value="3">3人</option>
+          <option value="4">4人</option>
+          <option value="5">5人</option>
+          <option value="6">6人以上</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">ステッカーの有無</label>
+        <div class="sticker-toggle">
+          <div class="sticker-option">
+            <input type="radio" name="sticker" id="sticker-yes" value="yes" onchange="App.updatePrice()">
+            <label for="sticker-yes">
+              <span class="icon">🎟️</span>
+              <span>ステッカーあり</span>
+            </label>
+          </div>
+          <div class="sticker-option">
+            <input type="radio" name="sticker" id="sticker-no" value="no" checked onchange="App.updatePrice()">
+            <label for="sticker-no">
+              <span class="icon">💰</span>
+              <span>ステッカーなし</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="price-preview">
+        <div>
+          <div class="label">お支払い金額（現地払い）</div>
+          <div class="label" id="price-note" style="margin-top:2px;"></div>
+        </div>
+        <div class="amount" id="price-display">¥10,000</div>
+      </div>
+      <div class="form-group" style="margin-top:16px;">
+        <label class="form-label">メモ（任意）</label>
+        <textarea class="form-textarea" id="f-notes" placeholder="ご要望・連絡事項があればどうぞ"></textarea>
+      </div>
+      <button type="submit" class="btn-submit">🔥 予約を申し込む</button>
+    </form>
+  </div>
+</div>
+
+<!-- ─── TOAST ─── -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════
+//  DATA LAYER (localStorage)
+// ═══════════════════════════════════════════
+const STORAGE = {
+  SLOTS: 'mns_slots',
+  RESERVATIONS: 'mns_reservations',
+  ADMIN_PW: 'mns_admin_pw',
+};
+const ADMIN_DEFAULT_PW = 'sauna2024'; // オーナーが変更可能
+
+function loadSlots() {
+  return JSON.parse(localStorage.getItem(STORAGE.SLOTS) || '[]');
+}
+function saveSlots(slots) {
+  localStorage.setItem(STORAGE.SLOTS, JSON.stringify(slots));
+}
+function loadReservations() {
+  return JSON.parse(localStorage.getItem(STORAGE.RESERVATIONS) || '[]');
+}
+function saveReservations(res) {
+  localStorage.setItem(STORAGE.RESERVATIONS, JSON.stringify(res));
+}
+function getAdminPw() {
+  return localStorage.getItem(STORAGE.ADMIN_PW) || ADMIN_DEFAULT_PW;
+}
+function uid() {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+function loadBizHours() {
+  return JSON.parse(localStorage.getItem('mns_biz') || 'null') || {
+    enabled: false,
+    openDays: [1,2,3,4,5,6,0],
+    startHour: 10,
+    endHour: 22,
+    slotDuration: 2,
+    closedDates: []
+  };
+}
+function saveBizHours(bh) {
+  localStorage.setItem('mns_biz', JSON.stringify(bh));
+}
+function fmtDate(d) {
+  return d.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+}
+function fmtYMD(y, m, d) {
+  return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+function parseYMD(s) {
+  const [y,m,d] = s.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+
+// ═══════════════════════════════════════════
+//  APP
+// ═══════════════════════════════════════════
+const App = (() => {
+  let state = {
+    year: new Date().getFullYear(),
+    month: new Date().getMonth(),
+    selectedDate: null,
+    selectedSlot: null,
+    adminTab: 'pending',
+    adminLoggedIn: false,
+  };
+
+  // ── Business hours helpers ──
+  function isOpenDay(ymd) {
+    const bh = loadBizHours();
+    if (!bh.enabled) return false;
+    if (bh.closedDates && bh.closedDates.includes(ymd)) return false;
+    const dow = parseYMD(ymd).getDay();
+    return bh.openDays.includes(dow);
+  }
+
+  function getEffectiveSlots(ymd) {
+    const manualSlots = loadSlots().filter(s => s.date === ymd);
+    if (manualSlots.length > 0) return manualSlots;
+    const bh = loadBizHours();
+    if (!bh.enabled) return [];
+    if (bh.closedDates && bh.closedDates.includes(ymd)) return [];
+    const dow = parseYMD(ymd).getDay();
+    if (!bh.openDays.includes(dow)) return [];
+    const slots = [];
+    for (let h = bh.startHour; h + bh.slotDuration <= bh.endHour; h += bh.slotDuration) {
+      slots.push({
+        id: `auto_${ymd}_${h}`,
+        date: ymd,
+        startHour: h,
+        endHour: h + bh.slotDuration,
+        isAuto: true
+      });
+    }
+    return slots;
+  }
+
+  // ── View routing ──
+  function showView(name) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + name).classList.add('active');
+    window.scrollTo(0,0);
+  }
+
+  function goAdmin() {
+    if (state.adminLoggedIn) {
+      showView('admin');
+      renderAdminContent();
+    } else {
+      showView('admin-login');
+    }
+  }
+
+  function adminLogin() {
+    const pw = document.getElementById('admin-pw').value;
+    if (pw === getAdminPw()) {
+      state.adminLoggedIn = true;
+      document.body.classList.add('admin-mode');
+      document.getElementById('admin-pw').value = '';
+      showView('admin');
+      renderAdminContent();
+    } else {
+      showToast('パスワードが違います');
+    }
+  }
+
+  function adminLogout() {
+    state.adminLoggedIn = false;
+    document.body.classList.remove('admin-mode');
+    showView('calendar');
+  }
+
+  function tryChangePhoto(slot) {
+    if (!state.adminLoggedIn) return;
+    document.getElementById(`photo-input-${slot}`).click();
+  }
+
+  function adminTab(tab) {
+    state.adminTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    renderAdminContent();
+  }
+
+  // ── Calendar ──
+  function renderCalendar() {
+    const slots = loadSlots();
+    const reservations = loadReservations();
+    const y = state.year, m = state.month;
+    document.getElementById('month-title').textContent = `${y}年 ${m+1}月`;
+    const grid = document.getElementById('calendar-grid');
+    const DOW = ['日','月','火','水','木','金','土'];
+    let html = DOW.map((d,i)=>`<div class="cal-header">${d}</div>`).join('');
+
+    const firstDay = new Date(y, m, 1).getDay();
+    const daysInMonth = new Date(y, m+1, 0).getDate();
+    const today = new Date(); today.setHours(0,0,0,0);
+
+    for (let i = 0; i < firstDay; i++) html += `<div class="cal-day empty"></div>`;
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const ymd = fmtYMD(y, m, d);
+      const date = new Date(y, m, d);
+      const isToday = date.getTime() === today.getTime();
+      const isPast  = date < today;
+      const dow = date.getDay();
+
+      const daySlots = slots.filter(s => s.date === ymd);
+      const hasSlots = (daySlots.length > 0 || isOpenDay(ymd)) && !isPast;
+
+      let cls = 'cal-day';
+      if (isPast)    cls += ' past';
+      if (isToday)   cls += ' today';
+      if (hasSlots)  cls += ' has-slots';
+      if (dow === 0) cls += ' sunday';
+      if (dow === 6) cls += ' saturday';
+      if (state.selectedDate === ymd && hasSlots) cls += ' selected';
+
+      let dots = '';
+      if (hasSlots) {
+        dots = '<div class="slot-dots">' + daySlots.map(s => {
+          const resForSlot = reservations.filter(r => r.slotId === s.id && r.status !== 'rejected');
+          return `<span class="${resForSlot.length ? 'taken' : ''}"></span>`;
+        }).join('') + '</div>';
+      }
+
+      const onclick = hasSlots ? `onclick="App.selectDate('${ymd}')"` : '';
+      html += `<div class="${cls}" ${onclick}><span>${d}</span>${dots}</div>`;
+    }
+    grid.innerHTML = html;
+    if (state.selectedDate) renderDayPanel(state.selectedDate);
+  }
+
+  function selectDate(ymd) {
+    state.selectedDate = ymd;
+    renderCalendar();
+    renderDayPanel(ymd);
+  }
+
+  function renderDayPanel(ymd) {
+    const slots = getEffectiveSlots(ymd);
+    const reservations = loadReservations();
+    const panel = document.getElementById('day-panel');
+    if (!slots.length) { panel.style.display = 'none'; return; }
+    panel.style.display = 'block';
+
+    const d = parseYMD(ymd);
+    let html = `<h3>${fmtDate(d)} の空き状況</h3><div class="slot-list">`;
+
+    slots.forEach(slot => {
+      const resForSlot = reservations.filter(r => r.slotId === slot.id && r.status !== 'rejected');
+      const isApproved = resForSlot.some(r => r.status === 'approved');
+      const isPending  = resForSlot.some(r => r.status === 'pending') && !isApproved;
+
+      let statusCls = 'available', statusTxt = '🟢 空き', actionBtn = '';
+      if (isApproved)     { statusCls = 'taken';   statusTxt = '🔴 予約済'; }
+      else if (isPending) { statusCls = 'pending';  statusTxt = '🟡 申請中（確認中）'; }
+
+      if (statusCls === 'available') {
+        actionBtn = `<button class="btn-reserve" onclick="App.openReserveModal('${slot.id}','${ymd}',${slot.startHour},${slot.endHour})">予約する</button>`;
+      } else {
+        actionBtn = `<span style="font-size:0.8rem;color:#bbb;background:#eee;border-radius:16px;padding:6px 12px;font-weight:600;">× 予約不可</span>`;
+      }
+
+      html += `<div class="slot-item ${statusCls}">
+        <div>
+          <div class="slot-time">${slot.startHour}:00 〜 ${slot.endHour}:00</div>
+          <div class="slot-status ${statusCls}">${statusTxt}</div>
+        </div>
+        ${actionBtn}
+      </div>`;
+    });
+    html += '</div>';
+    panel.innerHTML = html;
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function prevMonth() {
+    if (state.month === 0) { state.month = 11; state.year--; }
+    else state.month--;
+    state.selectedDate = null;
+    document.getElementById('day-panel').style.display = 'none';
+    renderCalendar();
+  }
+
+  function nextMonth() {
+    if (state.month === 11) { state.month = 0; state.year++; }
+    else state.month++;
+    state.selectedDate = null;
+    document.getElementById('day-panel').style.display = 'none';
+    renderCalendar();
+  }
+
+  // ── Reserve Modal ──
+  function openReserveModal(slotId, ymd, startH, endH) {
+    state.selectedSlot = { slotId, ymd, startH, endH };
+    const d = parseYMD(ymd);
+    document.getElementById('modal-title').textContent =
+      `📅 ${fmtDate(d)}　${startH}:00〜${endH}:00`;
+    document.getElementById('reserve-form').reset();
+    document.getElementById('sticker-no').checked = true;
+    updatePrice();
+    document.getElementById('modal-reserve').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('modal-reserve').classList.remove('open');
+  }
+
+  function updatePrice() {
+    const hasSticker = document.getElementById('sticker-yes').checked;
+    const slot = state.selectedSlot;
+    const hours = slot ? (slot.endH - slot.startH) : 1;
+    const price = hasSticker ? 0 : 10000 * hours;
+    const disp = document.getElementById('price-display');
+    const note = document.getElementById('price-note');
+    disp.textContent = hasSticker ? '¥0 (無料)' : `¥${price.toLocaleString()}`;
+    disp.className = 'amount' + (hasSticker ? ' free' : '');
+    note.textContent = hasSticker ? '※ 現地でステッカー確認します' : `${hours}時間 × ¥10,000`;
+  }
+
+  function submitReservation(e) {
+    e.preventDefault();
+    const slot = state.selectedSlot;
+    if (!slot) return;
+    const reservations = loadReservations();
+
+    // Double-check slot is still available
+    const conflict = reservations.find(r => r.slotId === slot.slotId && r.status !== 'rejected');
+    if (conflict) {
+      showToast('この時間帯はすでに予約が入りました');
+      closeModal();
+      renderCalendar();
+      return;
+    }
+
+    const hasSticker = document.getElementById('sticker-yes').checked;
+    const hours = slot.endH - slot.startH;
+    const price = hasSticker ? 0 : 10000 * hours;
+
+    const res = {
+      id: uid(),
+      slotId: slot.slotId,
+      date: slot.ymd,
+      startHour: slot.startH,
+      endHour: slot.endH,
+      name: document.getElementById('f-name').value.trim(),
+      contact: document.getElementById('f-contact').value.trim(),
+      people: document.getElementById('f-people').value,
+      hasSticker,
+      price,
+      notes: document.getElementById('f-notes').value.trim(),
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    };
+    reservations.push(res);
+    saveReservations(reservations);
+    closeModal();
+    showView('success');
+  }
+
+  // ── Admin Content ──
+  function renderAdminContent() {
+    const reservations = loadReservations();
+    const slots = loadSlots();
+    const pending = reservations.filter(r => r.status === 'pending');
+    document.getElementById('pending-count').textContent = pending.length;
+    const el = document.getElementById('admin-content');
+
+    if (state.adminTab === 'pending') {
+      if (!pending.length) {
+        el.innerHTML = `<div class="empty"><div class="icon">✅</div><p>申請中の予約はありません</p></div>`;
+        return;
+      }
+      el.innerHTML = pending.map(r => resCard(r)).join('');
+    }
+    else if (state.adminTab === 'approved') {
+      const approved = reservations.filter(r => r.status === 'approved');
+      if (!approved.length) {
+        el.innerHTML = `<div class="empty"><div class="icon">🗓️</div><p>承認済みの予約はありません</p></div>`;
+        return;
+      }
+      el.innerHTML = approved.map(r => resCard(r)).join('');
+    }
+    else if (state.adminTab === 'slots') {
+      renderSlotManager(el, slots, reservations);
+    }
+    else if (state.adminTab === 'biz') {
+      renderBizHoursManager(el);
+    }
+  }
+
+  function resCard(r) {
+    const d = parseYMD(r.date);
+    const actions = r.status === 'pending'
+      ? `<div class="res-actions">
+           <button class="btn-approve" onclick="App.approveRes('${r.id}')">✅ 承認</button>
+           <button class="btn-reject" onclick="App.rejectRes('${r.id}')">❌ 却下</button>
+         </div>` : '';
+    const priceHtml = r.hasSticker
+      ? `<div class="res-price free">🎟️ 無料（ステッカー持参）</div>`
+      : `<div class="res-price">💰 ¥${r.price.toLocaleString()}</div>`;
+    return `<div class="res-card ${r.status}">
+      <div class="res-card-header">
+        <span class="res-name">${escHtml(r.name)}</span>
+        <span class="res-badge ${r.status}">${{pending:'申請中',approved:'承認済',rejected:'却下'}[r.status]}</span>
+      </div>
+      <div class="res-detail">📅 ${fmtDate(d)}　${r.startHour}:00〜${r.endHour}:00</div>
+      <div class="res-detail">👥 ${r.people}人　📱 ${escHtml(r.contact)}</div>
+      ${priceHtml}
+      ${r.notes ? `<div class="res-detail">📝 ${escHtml(r.notes)}</div>` : ''}
+      ${actions}
+    </div>`;
+  }
+
+  function approveRes(id) {
+    const rs = loadReservations();
+    const r = rs.find(x => x.id === id);
+    if (r) r.status = 'approved';
+    saveReservations(rs);
+    showToast('承認しました ✅');
+    renderAdminContent();
+    renderCalendar();
+  }
+
+  function rejectRes(id) {
+    const rs = loadReservations();
+    const r = rs.find(x => x.id === id);
+    if (r) r.status = 'rejected';
+    saveReservations(rs);
+    showToast('却下しました');
+    renderAdminContent();
+    renderCalendar();
+  }
+
+  function renderSlotManager(el, slots, reservations) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const futureSlots = slots
+      .filter(s => parseYMD(s.date) >= today)
+      .sort((a,b) => a.date.localeCompare(b.date) || a.startHour - b.startHour);
+
+    const slotItems = futureSlots.map(s => {
+      const d = parseYMD(s.date);
+      const resCount = reservations.filter(r => r.slotId === s.id && r.status !== 'rejected').length;
+      const canDelete = resCount === 0;
+      return `<div class="admin-slot-item">
+        <div>
+          <div class="slot-info">${fmtDate(d)}　${s.startHour}:00〜${s.endHour}:00</div>
+          ${resCount ? `<div class="slot-res-count">予約あり（削除不可）</div>` : ''}
+        </div>
+        ${canDelete ? `<button class="btn-del-slot" onclick="App.deleteSlot('${s.id}')">🗑</button>` : ''}
+      </div>`;
+    }).join('') || '<p style="color:#aaa;font-size:0.85rem;padding:8px 0;">空き枠がありません</p>';
+
+    // Build hours options
+    const hourOpts = Array.from({length:24},(_,i)=>`<option value="${i}">${i}:00</option>`).join('');
+
+    el.innerHTML = `<div class="slot-manager">
+      <h3>🗓️ 空き枠を追加</h3>
+      <div class="add-slot-form">
+        <div class="form-group" style="margin:0">
+          <label class="form-label">日付 <span class="req">*</span></label>
+          <input type="date" class="form-input" id="slot-date">
+        </div>
+        <div class="add-slot-row">
+          <div class="form-group" style="flex:1;margin:0">
+            <label class="form-label">開始</label>
+            <select class="form-select" id="slot-start">${hourOpts}</select>
+          </div>
+          <div style="padding-bottom:2px;color:#aaa">〜</div>
+          <div class="form-group" style="flex:1;margin:0">
+            <label class="form-label">終了</label>
+            <select class="form-select" id="slot-end">${hourOpts}</select>
+          </div>
+        </div>
+        <button class="btn-add-slot" onclick="App.addSlot()">＋ 枠を追加</button>
+      </div>
+      <div class="slot-list-admin">
+        <h4>今後の空き枠</h4>
+        ${slotItems}
+      </div>
+    </div>`;
+
+    // Set sensible defaults
+    const now = new Date();
+    const yyyy = now.getFullYear(), mm = String(now.getMonth()+1).padStart(2,'0'), dd = String(now.getDate()+1).padStart(2,'0');
+    document.getElementById('slot-date').value = `${yyyy}-${mm}-${dd}`;
+    document.getElementById('slot-start').value = '10';
+    document.getElementById('slot-end').value = '11';
+  }
+
+  function renderBizHoursManager(el) {
+    const bh = loadBizHours();
+    const DOW_LABELS = ['日','月','火','水','木','金','土'];
+    const dayChecks = DOW_LABELS.map((label, i) =>
+      `<label style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;font-size:0.9rem;cursor:pointer;">
+        <input type="checkbox" id="biz-day-${i}" ${bh.openDays.includes(i) ? 'checked' : ''}> ${label}
+       </label>`
+    ).join('');
+    const hourOpts = Array.from({length:24},(_,i)=>`<option value="${i}"${i===bh.startHour?' selected':''}>${i}:00</option>`).join('');
+    const hourOptsEnd = Array.from({length:24},(_,i)=>`<option value="${i}"${i===bh.endHour?' selected':''}>${i}:00</option>`).join('');
+    el.innerHTML = `<div class="slot-manager">
+      <h3>🕐 営業時間の設定</h3>
+      <div class="form-group">
+        <label class="form-label">
+          <input type="checkbox" id="biz-enabled" ${bh.enabled ? 'checked' : ''}
+            onchange="App.toggleBizEnabled(this.checked)" style="margin-right:6px;">
+          営業時間を有効にする（ONにすると日付を自動で選択可能にします）
+        </label>
+      </div>
+      <div id="biz-settings" style="${bh.enabled ? '' : 'opacity:0.4;pointer-events:none;'}">
+        <div class="form-group">
+          <label class="form-label">営業曜日</label>
+          <div style="flex-wrap:wrap;display:flex;gap:4px 0;">${dayChecks}</div>
+        </div>
+        <div class="add-slot-row" style="gap:16px;flex-wrap:wrap;">
+          <div class="form-group" style="flex:1;min-width:120px;margin:0">
+            <label class="form-label">開始時間</label>
+            <select class="form-select" id="biz-start">${hourOpts}</select>
+          </div>
+          <div class="form-group" style="flex:1;min-width:120px;margin:0">
+            <label class="form-label">終了時間</label>
+            <select class="form-select" id="biz-end">${hourOptsEnd}</select>
+          </div>
+          <div class="form-group" style="flex:1;min-width:120px;margin:0">
+            <label class="form-label">1枠の時間</label>
+            <select class="form-select" id="biz-dur">
+              <option value="1" ${bh.slotDuration===1?'selected':''}>1時間</option>
+              <option value="2" ${bh.slotDuration===2?'selected':''}>2時間</option>
+              <option value="3" ${bh.slotDuration===3?'selected':''}>3時間</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-add-slot" onclick="App.saveBizSettings()" style="margin-top:8px;">💾 保存する</button>
+        <div style="margin-top:16px;padding:12px;background:var(--steam);border-radius:10px;font-size:0.82rem;color:var(--stone);line-height:1.7;">
+          ✅ 保存後、カレンダーの営業日をクリックすると時間帯の空き状況が表示されます。<br>
+          📌 個別に「枠管理」で追加したスロットはそちらが優先されます。
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function toggleBizEnabled(checked) {
+    const settings = document.getElementById('biz-settings');
+    settings.style.opacity = checked ? '' : '0.4';
+    settings.style.pointerEvents = checked ? '' : 'none';
+  }
+
+  function saveBizSettings() {
+    const bh = loadBizHours();
+    bh.enabled = document.getElementById('biz-enabled').checked;
+    bh.openDays = [0,1,2,3,4,5,6].filter(i => document.getElementById(`biz-day-${i}`).checked);
+    bh.startHour = parseInt(document.getElementById('biz-start').value);
+    bh.endHour = parseInt(document.getElementById('biz-end').value);
+    bh.slotDuration = parseInt(document.getElementById('biz-dur').value);
+    if (bh.endHour <= bh.startHour) { showToast('終了時間は開始より後にしてください'); return; }
+    if (!bh.openDays.length) { showToast('営業曜日を1つ以上選んでください'); return; }
+    saveBizHours(bh);
+    showToast('営業時間を保存しました ✅');
+    renderCalendar();
+  }
+
+  function addSlot() {
+    const dateVal = document.getElementById('slot-date').value;
+    const startH = parseInt(document.getElementById('slot-start').value);
+    const endH   = parseInt(document.getElementById('slot-end').value);
+    if (!dateVal) { showToast('日付を選んでください'); return; }
+    if (endH <= startH) { showToast('終了時間は開始より後にしてください'); return; }
+    const slots = loadSlots();
+    // Check overlap
+    const overlap = slots.find(s => s.date === dateVal && !(endH <= s.startHour || startH >= s.endHour));
+    if (overlap) { showToast('その日時には既に枠があります'); return; }
+    // Allow multi-hour slots as multiple 1h slots OR as one block? → 1ブロックとして追加
+    slots.push({ id: uid(), date: dateVal, startHour: startH, endHour: endH });
+    saveSlots(slots);
+    showToast('枠を追加しました ✅');
+    renderAdminContent();
+    renderCalendar();
+  }
+
+  function deleteSlot(id) {
+    const slots = loadSlots().filter(s => s.id !== id);
+    saveSlots(slots);
+    showToast('枠を削除しました');
+    renderAdminContent();
+    renderCalendar();
+  }
+
+  // ── Toast ──
+  function showToast(msg, dur = 2200) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), dur);
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Photo loading ──
+  const PHOTO_KEYS = ['mns_photo_1', 'mns_photo_2', 'mns_photo_3'];
+
+  function compressImage(dataUrl, callback) {
+    const img = new Image();
+    img.onload = function() {
+      const MAX = 1200;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else       { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      callback(canvas.toDataURL('image/jpeg', 0.75));
+    };
+    img.src = dataUrl;
+  }
+
+  function loadPhoto(input, slot) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      compressImage(e.target.result, function(dataUrl) {
+        try {
+          localStorage.setItem(PHOTO_KEYS[slot-1], dataUrl);
+          showToast('写真を保存しました ✅');
+        } catch(err) {
+          showToast('写真が大きすぎて保存できませんでした（このセッションのみ表示）');
+        }
+        applyPhoto(slot, dataUrl);
+        input.value = '';
+      });
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function applyPhoto(slot, dataUrl) {
+    const outer = document.getElementById(`hero-slot-${slot}`);
+    outer.innerHTML = '';
+    outer.className = 'hero-photo-slot photo-slot-wrap';
+    const img = document.createElement('img');
+    img.src = dataUrl;
+    img.className = 'hero-img';
+    img.alt = slot === 1 ? 'サウナ外観' : 'サウナ内装';
+    const overlay = document.createElement('div');
+    overlay.className = 'photo-change-overlay';
+    const btn = document.createElement('button');
+    btn.className = 'photo-change-btn';
+    btn.textContent = '📷 写真を変更';
+    btn.onclick = (e) => { e.stopPropagation(); document.getElementById(`photo-input-${slot}`).click(); };
+    overlay.appendChild(btn);
+    outer.appendChild(img);
+    outer.appendChild(overlay);
+  }
+
+  function restorePhotos() {
+    PHOTO_KEYS.forEach((key, i) => {
+      const data = localStorage.getItem(key);
+      if (data) {
+        applyPhoto(i+1, data);
+        if (i === 1) document.getElementById('photo-hint').classList.add('hidden');
+      }
+    });
+  }
+
+  // ── Init ──
+  function init() {
+    renderCalendar();
+    restorePhotos();
+    // Close modal on overlay click
+    document.getElementById('modal-reserve').addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+  }
+
+  return {
+    showView, goAdmin, adminLogin, adminLogout, adminTab,
+    prevMonth, nextMonth, selectDate,
+    openReserveModal, closeModal, updatePrice, submitReservation,
+    approveRes, rejectRes, addSlot, deleteSlot,
+    toggleBizEnabled, saveBizSettings,
+    tryChangePhoto, loadPhoto,
+    init,
+  };
+})();
+
+App.init();
+</script>
+</body>
+</html>
