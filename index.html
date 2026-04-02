@@ -936,7 +936,11 @@ async function apiFetch(url, opts = {}) {
   const fetchOpts = { headers: { 'Content-Type': 'application/json' }, ...opts };
   if (opts.body) fetchOpts.body = JSON.stringify(opts.body);
   const res = await fetch(url, fetchOpts);
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) {
+    let msg;
+    try { msg = (await res.json()).error || res.statusText; } catch { msg = res.statusText; }
+    throw new Error(`${res.status}: ${msg}`);
+  }
   return res.json();
 }
 
@@ -1289,8 +1293,9 @@ const App = (() => {
       await reloadAll();
       closeModal();
       showView('success');
-    } catch {
-      showToast('送信に失敗しました。もう一度お試しください');
+    } catch(err) {
+      console.error('予約送信エラー:', err);
+      showToast('送信に失敗しました: ' + err.message, 4000);
     }
   }
 
@@ -1604,7 +1609,12 @@ const App = (() => {
 
   // ── Init ──
   async function init() {
-    await reloadAll();
+    try {
+      await reloadAll();
+    } catch(err) {
+      console.error('データ読み込みエラー:', err);
+      showToast('データ読み込みエラー: ' + err.message, 5000);
+    }
     renderCalendar();
     restorePhotos();
     // Close modal on overlay click
