@@ -614,6 +614,97 @@
       .modal-box { border-radius: 20px; margin: auto; }
       .modal-overlay { align-items: center; }
     }
+    /* ─── Features banner ─── */
+    .features-banner {
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 10px rgba(78,44,23,0.08);
+    }
+    .features-banner .fee-row {
+      background: linear-gradient(135deg, #fff7f2, #ffeee4);
+      border: 1.5px solid var(--ember-light);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      font-size: 0.85rem;
+      color: var(--wood-dark);
+      line-height: 1.8;
+    }
+    .features-banner .fee-row strong { color: var(--ember); }
+    .features-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .feature-card {
+      background: var(--steam);
+      border-radius: 12px;
+      padding: 12px 10px;
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--wood-dark);
+      line-height: 1.5;
+    }
+    .feature-card .f-icon { font-size: 1.5rem; display: block; margin-bottom: 4px; }
+    .feature-card strong { color: var(--wood-dark); font-size: 0.82rem; }
+    .rental-banner-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--stone);
+      margin-bottom: 8px;
+    }
+    .rental-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .rental-chip {
+      background: var(--steam);
+      border: 1px solid var(--steam-dark);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 0.8rem;
+      color: var(--wood-dark);
+    }
+    .rental-chip span { color: var(--ember); font-weight: 700; margin-left: 4px; }
+    /* ─── Rental stepper in form ─── */
+    .rental-list { display: flex; flex-direction: column; }
+    .rental-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--steam-dark);
+    }
+    .rental-item:last-child { border-bottom: none; }
+    .rental-item-info { display: flex; align-items: center; gap: 8px; }
+    .rental-item-info .r-emoji { font-size: 1.3rem; }
+    .rental-item-name { font-size: 0.9rem; font-weight: 600; color: var(--wood-dark); }
+    .rental-item-price { font-size: 0.78rem; color: var(--stone); margin-top: 1px; }
+    .rental-stepper { display: flex; align-items: center; gap: 10px; }
+    .rental-stepper button {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      border: 2px solid var(--ember-light);
+      background: #fff;
+      font-size: 1.1rem; font-weight: 700;
+      color: var(--ember);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.15s;
+    }
+    .rental-stepper button:active { background: var(--ember); color: #fff; border-color: var(--ember); }
+    .rental-count { width: 22px; text-align: center; font-weight: 700; font-size: 1rem; color: var(--wood-dark); }
+    .rental-subtotal {
+      display: flex; justify-content: flex-end; align-items: center;
+      gap: 8px;
+      padding: 10px 0 4px;
+      font-size: 0.85rem;
+      color: var(--stone);
+    }
+    .rental-subtotal strong { color: var(--wood-dark); font-size: 0.95rem; }
   </style>
 </head>
 <body>
@@ -652,9 +743,30 @@
 
 <!-- ─── VIEW: 予約カレンダー ─── -->
 <div id="view-calendar" class="view active">
-  <div class="info-banner">
-    🎟️ <strong>オリジナルステッカー持参 → 無料</strong><br>
-    💰 ステッカーなし → <strong>¥10,000 / 1時間</strong>（何人でも同額）
+  <div class="features-banner">
+    <div class="fee-row">
+      🎟️ <strong>オリジナルステッカー持参 → 無料</strong><br>
+      💰 オリジナルステッカーなし → <strong>¥10,000 / 1時間</strong>（何人でも同額）
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="f-icon">🌡️</span>
+        <strong>温度・湿度をカスタマイズ</strong><br>
+        あなたに最適な環境をお約束します
+      </div>
+      <div class="feature-card">
+        <span class="f-icon">💦</span>
+        <strong>ロウリュ無制限</strong><br>
+        好きなだけアウフグースをどうぞ
+      </div>
+    </div>
+    <div class="rental-banner-title">🎽 レンタル品（現地払い・任意）</div>
+    <div class="rental-chips">
+      <div class="rental-chip">🎩 サウナハット<span>¥500</span></div>
+      <div class="rental-chip">🏳️ タオル<span>¥300</span></div>
+      <div class="rental-chip">👘 ポンチョ<span>¥300</span></div>
+      <div class="rental-chip">🩱 水着<span>¥300</span></div>
+    </div>
   </div>
   <div class="month-nav">
     <button class="nav-btn" onclick="App.prevMonth()">‹</button>
@@ -728,20 +840,20 @@
         </select>
       </div>
       <div class="form-group">
-        <label class="form-label">ステッカーの有無</label>
+        <label class="form-label">オリジナルステッカーの有無</label>
         <div class="sticker-toggle">
           <div class="sticker-option">
             <input type="radio" name="sticker" id="sticker-yes" value="yes" onchange="App.updatePrice()">
             <label for="sticker-yes">
               <span class="icon">🎟️</span>
-              <span>ステッカーあり</span>
+              <span>オリジナルステッカーあり</span>
             </label>
           </div>
           <div class="sticker-option">
             <input type="radio" name="sticker" id="sticker-no" value="no" checked onchange="App.updatePrice()">
             <label for="sticker-no">
               <span class="icon">💰</span>
-              <span>ステッカーなし</span>
+              <span>オリジナルステッカーなし</span>
             </label>
           </div>
         </div>
@@ -754,6 +866,56 @@
         <div class="amount" id="price-display">¥10,000</div>
       </div>
       <div class="form-group" style="margin-top:16px;">
+        <label class="form-label">🎽 レンタル品（任意・現地払い）</label>
+        <div class="rental-list">
+          <div class="rental-item">
+            <div class="rental-item-info">
+              <span class="r-emoji">🎩</span>
+              <div><div class="rental-item-name">サウナハット</div><div class="rental-item-price">¥500 / 枚</div></div>
+            </div>
+            <div class="rental-stepper">
+              <button type="button" onclick="App.changeRental('hat',-1)">－</button>
+              <span class="rental-count" id="rental-hat">0</span>
+              <button type="button" onclick="App.changeRental('hat',1)">＋</button>
+            </div>
+          </div>
+          <div class="rental-item">
+            <div class="rental-item-info">
+              <span class="r-emoji">🏳️</span>
+              <div><div class="rental-item-name">タオル</div><div class="rental-item-price">¥300 / 枚</div></div>
+            </div>
+            <div class="rental-stepper">
+              <button type="button" onclick="App.changeRental('towel',-1)">－</button>
+              <span class="rental-count" id="rental-towel">0</span>
+              <button type="button" onclick="App.changeRental('towel',1)">＋</button>
+            </div>
+          </div>
+          <div class="rental-item">
+            <div class="rental-item-info">
+              <span class="r-emoji">👘</span>
+              <div><div class="rental-item-name">ポンチョ</div><div class="rental-item-price">¥300 / 枚</div></div>
+            </div>
+            <div class="rental-stepper">
+              <button type="button" onclick="App.changeRental('poncho',-1)">－</button>
+              <span class="rental-count" id="rental-poncho">0</span>
+              <button type="button" onclick="App.changeRental('poncho',1)">＋</button>
+            </div>
+          </div>
+          <div class="rental-item">
+            <div class="rental-item-info">
+              <span class="r-emoji">🩱</span>
+              <div><div class="rental-item-name">水着</div><div class="rental-item-price">¥300 / 枚</div></div>
+            </div>
+            <div class="rental-stepper">
+              <button type="button" onclick="App.changeRental('swim',-1)">－</button>
+              <span class="rental-count" id="rental-swim">0</span>
+              <button type="button" onclick="App.changeRental('swim',1)">＋</button>
+            </div>
+          </div>
+        </div>
+        <div class="rental-subtotal">レンタル小計：<strong id="rental-subtotal-display">¥0</strong></div>
+      </div>
+      <div class="form-group" style="margin-top:8px;">
         <label class="form-label">メモ（任意）</label>
         <textarea class="form-textarea" id="f-notes" placeholder="ご要望・連絡事項があればどうぞ"></textarea>
       </div>
@@ -791,6 +953,13 @@ function saveReservations(res) {
 function getAdminPw() {
   return localStorage.getItem(STORAGE.ADMIN_PW) || ADMIN_DEFAULT_PW;
 }
+const RENTAL_ITEMS = [
+  { id: 'hat',    label: 'サウナハット', emoji: '🎩', price: 500 },
+  { id: 'towel',  label: 'タオル',       emoji: '🏳️', price: 300 },
+  { id: 'poncho', label: 'ポンチョ',     emoji: '👘', price: 300 },
+  { id: 'swim',   label: '水着',         emoji: '🩱', price: 300 },
+];
+
 function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
@@ -1025,6 +1194,10 @@ const App = (() => {
       `📅 ${fmtDate(d)}　${startH}:00〜${endH}:00`;
     document.getElementById('reserve-form').reset();
     document.getElementById('sticker-no').checked = true;
+    RENTAL_ITEMS.forEach(item => {
+      const el = document.getElementById(`rental-${item.id}`);
+      if (el) el.textContent = '0';
+    });
     updatePrice();
     document.getElementById('modal-reserve').classList.add('open');
   }
@@ -1033,16 +1206,40 @@ const App = (() => {
     document.getElementById('modal-reserve').classList.remove('open');
   }
 
+  function changeRental(id, delta) {
+    const el = document.getElementById(`rental-${id}`);
+    const current = parseInt(el.textContent) || 0;
+    el.textContent = Math.max(0, current + delta);
+    updatePrice();
+  }
+
+  function getRentalCounts() {
+    const counts = {};
+    RENTAL_ITEMS.forEach(item => {
+      const el = document.getElementById(`rental-${item.id}`);
+      counts[item.id] = el ? (parseInt(el.textContent) || 0) : 0;
+    });
+    return counts;
+  }
+
+  function getRentalTotal(counts) {
+    return RENTAL_ITEMS.reduce((sum, item) => sum + item.price * (counts[item.id] || 0), 0);
+  }
+
   function updatePrice() {
     const hasSticker = document.getElementById('sticker-yes').checked;
     const slot = state.selectedSlot;
     const hours = slot ? (slot.endH - slot.startH) : 1;
-    const price = hasSticker ? 0 : 10000 * hours;
+    const saunaPrice = hasSticker ? 0 : 10000 * hours;
+    const rentalTotal = hasSticker ? 0 : getRentalTotal(getRentalCounts());
+    const total = saunaPrice + rentalTotal;
     const disp = document.getElementById('price-display');
     const note = document.getElementById('price-note');
-    disp.textContent = hasSticker ? '¥0 (無料)' : `¥${price.toLocaleString()}`;
-    disp.className = 'amount' + (hasSticker ? ' free' : '');
-    note.textContent = hasSticker ? '※ 現地でステッカー確認します' : `${hours}時間 × ¥10,000`;
+    const rentalDisp = document.getElementById('rental-subtotal-display');
+    if (rentalDisp) rentalDisp.textContent = hasSticker ? '¥0（オリジナルステッカーで無料）' : `¥${rentalTotal.toLocaleString()}`;
+    disp.textContent = total === 0 ? '¥0 (無料)' : `¥${total.toLocaleString()}`;
+    disp.className = 'amount' + (total === 0 ? ' free' : '');
+    note.textContent = hasSticker ? '※ 現地でオリジナルステッカー確認します' : `${hours}時間 × ¥10,000`;
   }
 
   function submitReservation(e) {
@@ -1062,7 +1259,10 @@ const App = (() => {
 
     const hasSticker = document.getElementById('sticker-yes').checked;
     const hours = slot.endH - slot.startH;
-    const price = hasSticker ? 0 : 10000 * hours;
+    const saunaPrice = hasSticker ? 0 : 10000 * hours;
+    const rentalCounts = getRentalCounts();
+    const rentalTotal = hasSticker ? 0 : getRentalTotal(rentalCounts);
+    const price = saunaPrice + rentalTotal;
 
     const res = {
       id: uid(),
@@ -1074,6 +1274,8 @@ const App = (() => {
       contact: document.getElementById('f-contact').value.trim(),
       people: document.getElementById('f-people').value,
       hasSticker,
+      rentals: rentalCounts,
+      rentalTotal,
       price,
       notes: document.getElementById('f-notes').value.trim(),
       status: 'pending',
@@ -1124,8 +1326,15 @@ const App = (() => {
            <button class="btn-reject" onclick="App.rejectRes('${r.id}')">❌ 却下</button>
          </div>` : '';
     const priceHtml = r.hasSticker
-      ? `<div class="res-price free">🎟️ 無料（ステッカー持参）</div>`
+      ? `<div class="res-price free">🎟️ 無料（オリジナルステッカー持参）${r.rentalTotal ? ` + レンタル ¥${r.rentalTotal.toLocaleString()}` : ''}</div>`
       : `<div class="res-price">💰 ¥${r.price.toLocaleString()}</div>`;
+    const rentalHtml = r.rentals
+      ? (() => {
+          const lines = RENTAL_ITEMS.filter(item => (r.rentals[item.id] || 0) > 0)
+            .map(item => `${item.emoji}${item.label}×${r.rentals[item.id]}`).join('　');
+          return lines ? `<div class="res-detail">🎽 ${lines}</div>` : '';
+        })()
+      : '';
     return `<div class="res-card ${r.status}">
       <div class="res-card-header">
         <span class="res-name">${escHtml(r.name)}</span>
@@ -1134,6 +1343,7 @@ const App = (() => {
       <div class="res-detail">📅 ${fmtDate(d)}　${r.startHour}:00〜${r.endHour}:00</div>
       <div class="res-detail">👥 ${r.people}人　📱 ${escHtml(r.contact)}</div>
       ${priceHtml}
+      ${rentalHtml}
       ${r.notes ? `<div class="res-detail">📝 ${escHtml(r.notes)}</div>` : ''}
       ${actions}
     </div>`;
@@ -1405,7 +1615,7 @@ const App = (() => {
   return {
     showView, goAdmin, adminLogin, adminLogout, adminTab,
     prevMonth, nextMonth, selectDate,
-    openReserveModal, closeModal, updatePrice, submitReservation,
+    openReserveModal, closeModal, updatePrice, changeRental, submitReservation,
     approveRes, rejectRes, addSlot, deleteSlot,
     toggleBizEnabled, saveBizSettings,
     tryChangePhoto, loadPhoto,
