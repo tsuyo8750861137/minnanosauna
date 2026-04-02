@@ -929,30 +929,39 @@
 
 <script>
 // ═══════════════════════════════════════════
-//  DATA LAYER (localStorage)
+//  DATA LAYER (Vercel Postgres API)
 // ═══════════════════════════════════════════
-const STORAGE = {
-  SLOTS: 'mns_slots',
-  RESERVATIONS: 'mns_reservations',
-  ADMIN_PW: 'mns_admin_pw',
-};
-const ADMIN_DEFAULT_PW = 'sauna2024'; // オーナーが変更可能
 
-function loadSlots() {
-  return JSON.parse(localStorage.getItem(STORAGE.SLOTS) || '[]');
+async function apiFetch(url, opts = {}) {
+  const fetchOpts = { headers: { 'Content-Type': 'application/json' }, ...opts };
+  if (opts.body) fetchOpts.body = JSON.stringify(opts.body);
+  const res = await fetch(url, fetchOpts);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
 }
-function saveSlots(slots) {
-  localStorage.setItem(STORAGE.SLOTS, JSON.stringify(slots));
+
+// In-memory cache
+let _slots = [];
+let _reservations = [];
+let _bizHours = {
+  enabled: false, openDays: [1,2,3,4,5,6,0],
+  startHour: 10, endHour: 22, slotDuration: 2, closedDates: [],
+};
+
+async function reloadAll() {
+  const [slots, reservations, biz] = await Promise.all([
+    apiFetch('/api/slots'),
+    apiFetch('/api/reservations'),
+    apiFetch('/api/biz'),
+  ]);
+  _slots = slots;
+  _reservations = reservations;
+  _bizHours = biz;
 }
-function loadReservations() {
-  return JSON.parse(localStorage.getItem(STORAGE.RESERVATIONS) || '[]');
-}
-function saveReservations(res) {
-  localStorage.setItem(STORAGE.RESERVATIONS, JSON.stringify(res));
-}
-function getAdminPw() {
-  return localStorage.getItem(STORAGE.ADMIN_PW) || ADMIN_DEFAULT_PW;
-}
+
+function loadSlots()        { return _slots; }
+function loadReservations() { return _reservations; }
+function loadBizHours()     { return _bizHours; }
 const RENTAL_ITEMS = [
   { id: 'hat',    label: 'サウナハット', emoji: '🎩', price: 500 },
   { id: 'towel',  label: 'タオル',       emoji: '🏳️', price: 300 },
@@ -963,18 +972,9 @@ const RENTAL_ITEMS = [
 function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
-function loadBizHours() {
-  return JSON.parse(localStorage.getItem('mns_biz') || 'null') || {
-    enabled: false,
-    openDays: [1,2,3,4,5,6,0],
-    startHour: 10,
-    endHour: 22,
-    slotDuration: 2,
-    closedDates: []
-  };
-}
-function saveBizHours(bh) {
-  localStorage.setItem('mns_biz', JSON.stringify(bh));
+async function saveBizHours(bh) {
+  await apiFetch('/api/biz', { method: 'POST', body: bh });
+  _bizHours = bh;
 }
 function fmtDate(d) {
   return d.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
@@ -1046,15 +1046,20 @@ const App = (() => {
     }
   }
 
-  function adminLogin() {
+  async function adminLogin() {
     const pw = document.getElementById('admin-pw').value;
-    if (pw === getAdminPw()) {
-      state.adminLoggedIn = true;
-      document.body.classList.add('admin-mode');
-      document.getElementById('admin-pw').value = '';
-      showView('admin');
-      renderAdminContent();
-    } else {
+    try {
+      const result = await apiFetch('/api/admin', { method: 'POST', body: { password: pw } });
+      if (result.ok) {
+        state.adminLoggedIn = true;
+        document.body.classList.add('admin-mode');
+        document.getElementById('admin-pw').value = '';
+        showView('admin');
+        renderAdminContent();
+      } else {
+        showToast('パスワードが違います');
+      }
+    } catch {
       showToast('パスワードが違います');
     }
   }
@@ -1242,17 +1247,17 @@ const App = (() => {
     note.textContent = hasSticker ? '※ 現地でオリジナルステッカー確認します' : `${hours}時間 × ¥10,000`;
   }
 
-  function submitReservation(e) {
+  async function submitReservation(e) {
     e.preventDefault();
     const slot = state.selectedSlot;
     if (!slot) return;
-    const reservations = loadReservations();
 
     // Double-check slot is still available
-    const conflict = reservations.find(r => r.slotId === slot.slotId && r.status !== 'rejected');
+    const conflict = loadReservations().find(r => r.slotId === slot.slotId && r.status !== 'rejected');
     if (conflict) {
       showToast('この時間帯はすでに予約が入りました');
       closeModal();
+      await reloadAll();
       renderCalendar();
       return;
     }
@@ -1278,13 +1283,15 @@ const App = (() => {
       rentalTotal,
       price,
       notes: document.getElementById('f-notes').value.trim(),
-      status: 'pending',
-      createdAt: new Date().toISOString(),
     };
-    reservations.push(res);
-    saveReservations(reservations);
-    closeModal();
-    showView('success');
+    try {
+      await apiFetch('/api/reservations', { method: 'POST', body: res });
+      await reloadAll();
+      closeModal();
+      showView('success');
+    } catch {
+      showToast('送信に失敗しました。もう一度お試しください');
+    }
   }
 
   // ── Admin Content ──
@@ -1349,21 +1356,17 @@ const App = (() => {
     </div>`;
   }
 
-  function approveRes(id) {
-    const rs = loadReservations();
-    const r = rs.find(x => x.id === id);
-    if (r) r.status = 'approved';
-    saveReservations(rs);
+  async function approveRes(id) {
+    await apiFetch('/api/reservations', { method: 'PATCH', body: { id, status: 'approved' } });
+    await reloadAll();
     showToast('承認しました ✅');
     renderAdminContent();
     renderCalendar();
   }
 
-  function rejectRes(id) {
-    const rs = loadReservations();
-    const r = rs.find(x => x.id === id);
-    if (r) r.status = 'rejected';
-    saveReservations(rs);
+  async function rejectRes(id) {
+    await apiFetch('/api/reservations', { method: 'PATCH', body: { id, status: 'rejected' } });
+    await reloadAll();
     showToast('却下しました');
     renderAdminContent();
     renderCalendar();
@@ -1482,7 +1485,7 @@ const App = (() => {
     settings.style.pointerEvents = checked ? '' : 'none';
   }
 
-  function saveBizSettings() {
+  async function saveBizSettings() {
     const bh = loadBizHours();
     bh.enabled = document.getElementById('biz-enabled').checked;
     bh.openDays = [0,1,2,3,4,5,6].filter(i => document.getElementById(`biz-day-${i}`).checked);
@@ -1491,32 +1494,29 @@ const App = (() => {
     bh.slotDuration = parseInt(document.getElementById('biz-dur').value);
     if (bh.endHour <= bh.startHour) { showToast('終了時間は開始より後にしてください'); return; }
     if (!bh.openDays.length) { showToast('営業曜日を1つ以上選んでください'); return; }
-    saveBizHours(bh);
+    await saveBizHours(bh);
     showToast('営業時間を保存しました ✅');
     renderCalendar();
   }
 
-  function addSlot() {
+  async function addSlot() {
     const dateVal = document.getElementById('slot-date').value;
     const startH = parseInt(document.getElementById('slot-start').value);
     const endH   = parseInt(document.getElementById('slot-end').value);
     if (!dateVal) { showToast('日付を選んでください'); return; }
     if (endH <= startH) { showToast('終了時間は開始より後にしてください'); return; }
-    const slots = loadSlots();
-    // Check overlap
-    const overlap = slots.find(s => s.date === dateVal && !(endH <= s.startHour || startH >= s.endHour));
+    const overlap = loadSlots().find(s => s.date === dateVal && !(endH <= s.startHour || startH >= s.endHour));
     if (overlap) { showToast('その日時には既に枠があります'); return; }
-    // Allow multi-hour slots as multiple 1h slots OR as one block? → 1ブロックとして追加
-    slots.push({ id: uid(), date: dateVal, startHour: startH, endHour: endH });
-    saveSlots(slots);
+    await apiFetch('/api/slots', { method: 'POST', body: { id: uid(), date: dateVal, startHour: startH, endHour: endH } });
+    await reloadAll();
     showToast('枠を追加しました ✅');
     renderAdminContent();
     renderCalendar();
   }
 
-  function deleteSlot(id) {
-    const slots = loadSlots().filter(s => s.id !== id);
-    saveSlots(slots);
+  async function deleteSlot(id) {
+    await apiFetch(`/api/slots?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    await reloadAll();
     showToast('枠を削除しました');
     renderAdminContent();
     renderCalendar();
@@ -1603,7 +1603,8 @@ const App = (() => {
   }
 
   // ── Init ──
-  function init() {
+  async function init() {
+    await reloadAll();
     renderCalendar();
     restorePhotos();
     // Close modal on overlay click
